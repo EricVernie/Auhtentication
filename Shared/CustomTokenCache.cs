@@ -81,7 +81,13 @@ using System.Text;
             /// <param name="blob">Blob of bytes to write</param>
             private static void WriteToFileIfNotNull(string path, byte[] blob)
             {
-                if (blob != null)
+            //WARNING this is only for demo purpose
+            //YOU NEED TO PROTECT THE TOKEN WITH A CRYPTO API LIKE 
+            //https://docs.microsoft.com/en-us/dotnet/api/system.security.cryptography.protecteddata?view=netframework-4.7.2
+            //This API does not exist (yet?) with .NET Core.
+            //Need to develop Core API with the Windows API
+            //https://msdn.microsoft.com/en-us/library/ms995355.aspx
+            if (blob != null)
                 {
                     File.WriteAllBytes(path, blob);
                 }

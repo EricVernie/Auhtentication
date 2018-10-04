@@ -17,7 +17,7 @@ namespace AdalAuthentication
         static string LoginUrl = ConfigurationManager.AppSettings["LoginUrl"];
         static string Tenant = ConfigurationManager.AppSettings["Tenant"];
         static string Authority = $"{LoginUrl}/{Tenant}";
-        static string ClientId = ConfigurationManager.AppSettings["ClientId"];
+        static string ClientId = ConfigurationManager.AppSettings["Modern.Authentication.Native"];
         static string Resource= ConfigurationManager.AppSettings["Resource"];
         static Uri RedirectUrl = new Uri(ConfigurationManager.AppSettings["RedirectUrl"]);
         static AuthenticationContext ctx = new AuthenticationContext(Authority, true, new CustomTokenCache("scp.dat"));
@@ -25,22 +25,28 @@ namespace AdalAuthentication
         {
             Console.WriteLine("Login...");
         }
-        public static async Task<AuthenticationResult> AcquireTokenWithUserInteraction()
+        public static async Task<AuthenticationResult> AcquireTokenWithUserInteraction(string clientId=null, string redirectUrl=null)
         {
             PlatformParameters platformParameters = new PlatformParameters();            
-            return await ctx.AcquireTokenAsync(Resource, ClientId, RedirectUrl,platformParameters).ConfigureAwait(false);
+            if (string.IsNullOrEmpty(clientId) && string.IsNullOrEmpty(redirectUrl))
+            {
+                return await ctx.AcquireTokenAsync(Resource, ClientId, RedirectUrl, platformParameters).ConfigureAwait(false);
+            }
+
+            return await ctx.AcquireTokenAsync(Resource, clientId, new Uri(redirectUrl), platformParameters).ConfigureAwait(false);
+
         }
 
        
-        public static async Task<AuthenticationResult> Run(Func<Task<AuthenticationResult>> func)
+        public static async Task<AuthenticationResult> Run(Func<string,Task<AuthenticationResult>> func,string clientId=null)
         {
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            var result = await func();
+            var result = await func(clientId);
             watch.Start();
             Console.WriteLine($"Elapsed time: {watch.ElapsedMilliseconds}");
             return result;
         }
-        public static async Task<AuthenticationResult> AcquireTokenWithSSOAsync()
+        public static async Task<AuthenticationResult> AcquireTokenWithSSOAsync(string clientId = null,string resourceId=null)
         {
 
             AuthenticationResult result = null;
@@ -54,17 +60,30 @@ namespace AdalAuthentication
                 upn = UserPrincipal.Current.UserPrincipalName;
                 CustomTokenCache.WriteData("upn.dat", upn);
             }
-                                               
-            try
-            {                
-                result = await ctx.AcquireTokenSilentAsync(Resource, ClientId).ConfigureAwait(false);
-            }
-            catch (AdalException)
+            if (string.IsNullOrEmpty(clientId) && string.IsNullOrEmpty(resourceId))
             {
-                result = await ctx.AcquireTokenAsync(Resource, ClientId, new UserCredential(upn)).ConfigureAwait(false);
-            }
-            
 
+                try
+                {
+                    result = await ctx.AcquireTokenSilentAsync(Resource, ClientId).ConfigureAwait(false);
+                }
+                catch (AdalException)
+                {
+                    result = await ctx.AcquireTokenAsync(Resource, ClientId, new UserCredential(upn)).ConfigureAwait(false);
+                }
+
+            }
+            else
+            {
+                try
+                {
+                    result = await ctx.AcquireTokenSilentAsync(resourceId, clientId).ConfigureAwait(false);
+                }
+                catch (AdalException)
+                {
+                    result = await ctx.AcquireTokenAsync(resourceId, clientId, new UserCredential(upn)).ConfigureAwait(false);
+                }
+            }
           
             return result;
         }

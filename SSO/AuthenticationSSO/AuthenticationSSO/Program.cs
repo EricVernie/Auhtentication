@@ -14,11 +14,11 @@ namespace AuthenticationSSO
        
         static async Task MainAsync(string[] args)
         {
-            
-            
+                        
             try
             {
-                Func<Task<AuthenticationResult>> _func = Helper.AcquireTokenWithSSOAsync;
+                
+                Func<string,Task<AuthenticationResult>> _func = Helper.AcquireTokenWithSSOAsync;
                 var result = await Helper.Run(_func);
                                        
                 await AzureRM.AzureResourceManagerHelper.Authenticate(result.AccessToken, result.TenantId)
